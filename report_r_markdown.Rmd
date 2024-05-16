@@ -1,0 +1,232 @@
+---
+title: "Report"
+author: "Thien Huong Pham"
+date: "2024-05-01"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align='center')
+library(shiny)
+library(DT)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+```
+
+
+### **1. Übersicht über den Titanic-Datensatz**
+
+```{r}
+# Reading dataset
+data <- read.csv("titanic_data.csv") 
+
+#Take a glimpse
+glimpse(data)
+
+# checking column names of the dataset and the number of missing values in each column
+colSums(is.na(data))
+
+#Print values in some columns and the number of corresponding value
+data %>%
+  count(Embarked) %>%
+  print()
+
+data %>%
+  count(Sex) %>%
+  print()
+
+data %>%
+  count(Pclass) %>%
+  print()
+
+data %>%
+  count(Survived) %>%
+  print()
+```
+
+Zunächst haben wir versucht, die Struktur des Titanic-Datensatzes mithilfe von R-Code zu analysieren. Die Ausgabe des Codes zeigt, dass der Datensatz 891 Zeilen und 12 Spalten umfasst, was 891 Passagieren mit 12 Merkmalen entspricht. Diese Merkmale sind: Passagier-ID, Überlebensstatus, Passagierklasse, Name, Geschlecht, Alter, Anzahl der Geschwister/Ehepartner an Bord, Anzahl der Eltern/Kinder an Bord, Ticketnummer, Ticketpreis, Kabine und Einschiffungshafen.
+
+Es wurde festgestellt, dass 177 Werte für das Alter der Passagiere fehlen. Um diesem Problem zu begegnen, haben wir uns dazu entschieden, Passagiere mit fehlenden Altersangaben zu entfernen und uns ausschließlich auf die verbleibenden 714 Passagiere mit vollständigen Daten zu konzentrieren.
+
+```{r, echo=FALSE}
+#Change value in Survived column
+data$Survived <- ifelse(data$Survived == 1, "Survived","Died")
+
+#Change data type of Age column into integer
+data$Age <- as.integer(data$Age)
+
+#Create a sub-dataset by converting the specified columns to factor variables 
+#and dealing with 2 blank data in Embarked column and 177 missing value in Age column
+sub_data <- data %>%
+  mutate(across(c(Survived, Pclass, Sex, Embarked), as.factor)) %>%
+  filter(Embarked %in% c("S", "C", "Q")) %>%
+  filter(!is.na(Age))
+
+glimpse(sub_data)
+```
+
+Basierend auf der Ausgabe von summary() erhalten wir einen detaillierten Einblick in die Struktur des Titanic-Datensatzes.
+
+```{r}
+summary(sub_data)
+```
+
+Die Analyse der Titanic-Datenausgabe gibt uns einen umfassenden Einblick in die Charakteristika der Passagiere:
+
+-   Von den insgesamt 714 Passagieren sind 424 verstorben, während 290 überlebt haben, was 40,6 % der Passagiere entspricht. Das bedeutet, dass mehr Menschen sterben als überlebt haben.
+
+-   Die Verteilung der Passagierklassen zeigt, dass 186 zur Klasse 1, 173 zur Klasse 2 und 355 zur Klasse 3 gehören. Die erste Klasse ist eine VIP-Klasse mit den wohlhabendsten Passagieren des Schiffes, darunter prominente Mitglieder der Oberschicht, Geschäftsleute, Politiker, hochrangige Soldaten, Entertainer, Prominente und Profisportler. Zu den Passagieren der zweiten Klasse gehörten hauptsächlich Reisende der Mittelklasse, darunter Professoren, Autoren und Touristen. Passagiere der dritten Klasse waren hauptsächlich Einwanderer in die Vereinigten Staaten und Kanada, und die meisten Menschen sind hier.
+
+-   Hinsichtlich des Geschlechts sind 261 Passagiere weiblich und 453 männlich, was bedeutet, dass 36,6 % der Passagiere weiblich sind.
+
+-   Das Alter der Passagiere variiert zwischen 0 und 80 Jahren, mit einem Durchschnittsalter von 29,68 Jahren.
+
+-   Die Anzahl der Geschwister/Ehepartner an Bord (SibSp) und der Eltern/Kinder an Bord (Parch) zeigt Variationen, wobei die durchschnittlichen Werte bei 0,51 bzw. 0,43 liegen.
+
+-   Der Fahrpreis (Fare) erstreckt sich von 0 bis 512,33, wobei der durchschnittliche Preis bei 34,69 liegt.
+
+-   Die Einschiffungshäfen sind in den Kategorien "C", "Q" und "S" verteilt, wobei "S" mit 554 Passagieren am häufigsten ist.
+
+Diese Daten wurden auf der Seite „Overview“ visualisiert und hier können Benutzer verschiedene Kriterien wie Passagierklasse, Geschlecht, Einschiffungshafen, Alter, Ticketpreis sowie Passagiere mit Eltern/Kindern oder Geschwistern/Ehepartnern an Bord auswählen. Anschließend wurden Passagiere mit diesen Merkmalen in Tabellen ausgedruckt und ihre Überlebensrate in einem Kreisdiagramm visualisiert. Die Kabineninformationen, die Passagier-ID und das Ticket haben keinen großen Einfluss auf die Überlebenschancen der Passagiere, sodass sie nicht berücksichtigt werden.
+
+### **2. Die Überlebenschancen der Passagiere nach jeder Merkmale**
+
+Um die Überlebensrate von Passagieren zu untersuchen, wurden verschiedene Arten von Diagrammen verwendet, die uns bei der Visualisierung der Daten helfen. Für Merkmale Geschlecht wurde das Mosaikplot verwendet, während die meisten anderen Merkmale im Balkendiagramm oder Histogramm visualisiert wurden. Darüber hinaus wurde der Boxplot verwendet, um die Verteilung des Ticketpreises darzustellen.
+
+#### **2.1. Sex**
+
+```{r, echo=FALSE}
+table <- (table(sub_data$Sex, sub_data$Survived))
+mosaicplot(table, col = c("#da5f02", "#009E73"), main = "Death and survival rate by Gender", las = 1)
+```
+
+Anhand der Mosaikplot lässt sich ableiten, dass die Überlebensrate weiblicher Passagiere erheblich höher ist als die der männlichen Passagiere. Etwa 65 % der Touristen waren männlich, während die verbleibenden 35 % weiblich waren. Trotzdem verloren über 80 % der männlichen Passagiere ihr Leben im Vergleich zu etwa 70 % der weiblichen Passagiere. Die Anzahl der weiblichen Todesfälle ist deutlich niedriger als die der männlichen Todesfälle, was darauf hindeuten könnte, dass Frauen während der Evakuierung der Titanic möglicherweise priorisiert wurden. Dies könnte darauf zurückzuführen sein, dass Frauen in dieser Situation als schutzbedürftiger angesehen wurden als Männer.
+
+#### **2.2. Age**
+
+```{r, echo=FALSE}
+ggplot(sub_data, aes(x = Age, fill = Survived)) + 
+        geom_histogram(binwidth = 5, color = "white") + 
+        geom_vline(aes(xintercept = mean(Age)), color = "darkblue") + 
+        labs(title = "Survival Rate by Age", x = "Age", y = "Number of Passengers") + 
+        theme_gray()+scale_fill_manual(values = c("#da5f02", "#009E73")) 
+    
+```
+
+Das Histogramm verdeutlicht, dass der Großteil der Titanic-Passagiere ein Alter zwischen 20 und 40 Jahren aufwies, wobei das durchschnittliche Alter der an Bord befindlichen Passagiere knapp 30 Jahre betrug. Daher befinden sich die meisten Überlebenden in der Altersspanne von 22 bis 36 Jahren. Trotzdem kamen viele junge Menschen in dieser Altersgruppe während des Vorfalls mit der Titanic ums Leben. Zusätzlich zeigt dieses Diagramm, dass die Anzahl der Opfer in den meisten Altersgruppen höher ist als die Anzahl der Überlebenden. Nur bei Kindern unter 10 Jahren war die Überlebensrate größer als die Sterblichkeitsrate. Passagiere im Alter von 65 bis 75 Jahren hatten fast keine Überlebenschance, aber ein Passagier im Alter von 80 Jahren überlebte.
+
+#### **2.3. PClass**
+
+```{r, echo=FALSE}
+ggplot(sub_data, aes(x = Pclass, fill = Survived)) +
+  geom_bar(position = "dodge", color = "black", stat = "count") +
+  labs(title = "Survival Rate by PClass", x = "Passenger Class", 
+  y = "Number of Passengers") + theme_gray() + 
+  scale_fill_manual(values = c("#da5f02", "#009E73"))
+```
+
+Die Zugehörigkeit zur Passagierklasse scheint einen Einfluss auf Leben und Tod zu haben. Anhand der vorliegenden Balkendiagramm stammen die überlebenden Passagiere vorwiegend aus der ersten Klasse, während die Verstorbenen größtenteils der dritten Klasse angehörten, obwohl die Anzahl der Passagiere in der dritten Klasse höher war als die in der ersten und zweiten Klasse. Dies bedeutet, dass Personen der ersten Klasse während des Evakuierungsprozesses möglicherweise eine höhere Priorität erhielten als diejenigen der dritten Klasse.
+
+#### **2.4. SibSp**
+
+```{r, echo=FALSE}
+ggplot(sub_data, aes(x = factor(SibSp), fill = Survived)) +
+  geom_bar(position = "dodge", color = "black", stat = "count") +
+  labs(title = "Survival rate by Sibsp", x = "Number of siblings/spouses", 
+  y = "Number of Passengers") +
+  theme_gray()+scale_fill_manual(values = c("#da5f02", "#009E73"))
+```
+
+Die vorliegende Balkendiagramm verdeutlicht, dass mehr als 90 % der Personen entweder allein reisten oder in Begleitung eines Geschwisters oder Ehepartners waren. Interessanterweise wiesen Passagiere, die in Begleitung eines Geschwisters oder Ehepartners reisten, eine höhere Überlebensrate auf. Jedoch sanken die Überlebenschancen erheblich, wenn jemand mit zwei oder mehr Geschwistern oder Ehepartner reiste. Bedauerlicherweise überlebte kein Passagier, bei dem die Anzahl der Geschwister oder Ehepartner (SibSp) größer als 4 war.
+
+#### **2.5. Parch**
+
+```{r, echo=FALSE}
+ggplot(sub_data, aes(x = factor(Parch), fill = Survived)) +
+  geom_bar(position = "fill", color = "black") +
+  labs(title = "Survival Rate by Parch", x = "Number of parents/children", 
+  y = "Survival Rate") + theme_gray()+
+  scale_fill_manual(values = c("#da5f02", "#009E73"))
+```
+
+Basierend auf dem Diagramm oben hat eine höhere Anzahl von Passagieren, die mit ein bis drei Eltern oder Kindern reisten, überlebt im Vergleich zu Personen, die alleine reisten oder vier oder mehr Eltern/Kindern hatten. Allerdings überlebten fast keine Passagiere mit Parch \> 3.
+
+Anhand der Statistken von Parch und SibSp haben Passagiere mit wenigen Familienangehörigen höhere Überlebenschance.
+
+#### **2.6. Embarked**
+
+```{r, echo=FALSE}
+ggplot(sub_data, aes(x = Embarked, fill = Survived)) +
+  geom_bar(position = "stack", color = "black", stat = "count") +
+  labs(title = "Survival rate by Port of Embarktion", x = " Port of embarkation", 
+  y = "Number of Passengers") + theme_gray()+ 
+  scale_fill_manual(values = c("#da5f02", "#009E73"))
+```
+
+"Embarked" weist zwei fehlende Werte auf und wird aber als vorhandene Daten mit leerem Wert angezeigt. Es gibt drei mögliche Werte für "Embark" – Southampton, Cherbourg und Queenstown. Die Mehrheit der Passagiere schiffte sich in Southampton ein. Etwa 20% stiegen in Cherbourg an Bord, während der Rest in Queenstown einschiffte. Allerdings scheinen Passagiere, die in Cherbourg an Bord gingen, glücklicher zu sein, da mehr als die Hälfte von ihnen überlebte. Im Gegensatz dazu überlebten nur 33 Prozent der Passagiere, die in Southampton an Bord gingen. Ähnliche Situtaion wurden bei den Passagieren beobachtet, die das Schiff in Queenstown bestiegen.
+
+#### **2.7. Fare**
+
+```{r, echo=FALSE}
+ggplot(sub_data, aes(x = Survived, y = Fare, fill = Survived)) +
+  geom_boxplot() + labs(title = "Survival Rate by Price of Ticket", 
+  x = "Survival Status", y = "Price of Ticket") +
+  theme_bw()+scale_fill_manual(values = c("#da5f02", "#009E73"))
+```
+
+Die Verteilung der Fahrpreise der Überlebenden hat eindeutig einen höheren Medianwert, daher hatten überlebende Passagiere höhere Durchschnittsfahrpreise. Zudem sind viele Ausreißer in beiden Verteilungen zu erkennen. Interessanterweise haben wir sieben Passagiere festgestellt, die kein Ticket bezahlten und alle starben. Daher war es offensichtlich, dass ein starker Zusammenhang zwischen der Anklage und dem Überleben bestand. Je höher ein Tourist bezahlte, desto höher waren seine Überlebenschancen.
+
+### **3. Die Überlebenschancen der Passagiere nach gemischten Merkmalen**
+
+#### **3.1.** Überlebens- und Todesverteilung nach Age und PClass
+
+```{r, echo=FALSE}
+ggplot(sub_data, aes(x = Age, fill = Survived)) +
+        geom_histogram(binwidth = 5, color = "white", position = "stack") +
+        facet_grid(Sex ~ Pclass, scales = "free_y") +
+        theme_gray()+ labs(title = "Survival and Death Distribution by Age and Class",
+        x = "Age", y = "Number of Passengers", fill = "Class") +
+        theme(legend.position = "bottom")+scale_fill_manual(values = c("#da5f02", "#009E73"))
+```
+
+Anhand des obigen Diagramms zeigt, dass Frauen im Vergleich zu Männern häufiger überlebten, insbesondere unter Passagieren der ersten und zweiten Klasse. Bei Frauen in der dritten Klasse ist die Überlebensrate für jüngere Passagiere höher. Im Gegensatz dazu ist die Überlebensrate für männliche Passagiere im Allgemeinen gering, wobei männliche Passagiere in der dritten Klasse die höchste Sterblichkeitsrate aufweisen. Nur Kinder und Jugendliche haben eine höhere Überlebenschance haben.
+
+#### **3.2.** Altersverteilung der Passagiere nach PClass und Sex
+
+```{r, echo=FALSE}
+ggplot(sub_data, aes(x = factor(Pclass), y = Age, fill = Sex)) +
+  geom_boxplot() + labs(title = "Age distribution of passengers by PClass and Gender", x = "Passenger Class", y = "Age", fill = "Gender") +
+  theme_gray() + scale_fill_brewer(palette = "Dark2")
+```
+
+```{r, echo=FALSE}
+survivors <- sub_data[sub_data$Survived == "Survived", ]
+ggplot(survivors, aes(x = factor(Pclass), y = Age, fill = Sex)) +
+  geom_boxplot() + labs(title = "Age distribution of Survivors by PClass and Gender", x = "Passenger Class", y = "Age", fill = "Gender") +
+  theme_gray() + scale_fill_brewer(palette = "Dark2")
+```
+
+```{r, echo=FALSE}
+death <- sub_data[sub_data$Survived == "Died",]
+ggplot(death, aes(x = factor(Pclass), y = Age, fill = Sex)) +
+  geom_boxplot() + labs(title = "Age distribution of Non-Survivors by PClass & Gender", x = "Passenger Class", y = "Age", fill = "Gender") +
+  theme_gray() + scale_fill_brewer(palette = "Dark2")
+```
+
+Die oben Boxplots deuten darauf hin, dass männliche Passagiere auf der Titanic im Durchschnitt älter waren als weibliche Passagiere. Personen über 50 Jahre gelten als Ausreißer in der Verteilung der Überlebenden, während Personen über 55 Jahre als Ausreißer in der Verteilung der Nichtüberlebenden betrachtet werden. Nur sehr wenige Menschen über 55 Jahre haben tatsächlich überlebt. Darüber hinaus reisten die meisten älteren Menschen in der ersten Klasse, was möglicherweise daran lag, dass sie reich waren. Die Jugendlichen im Alter zwischen 25 und 35 Jahren gehört überwiegend zu der zweiten und dritten Klasse. Im Boxplot zur Altersverteilung der Überlebenden liegt das mittlere Alter männlicher Passagiere in Klasse 2 sehr niedrig bei etwa 3, was darauf hindeutet, dass die meisten männlichen Kinder dieser Klasse eine höhere Überlebenschance hatten.
+
+### **4. Fazit**
+
+Die Überlebenschancen der Titanic-Passagiere wurden von verschiedenen Merkmalen beeinflusst, wobei Alter, Kabinenklasse und Geschlecht die stärksten Zusammenhänge aufwiesen.
+
+Bestimmte Altersgruppen hatten höhere Überlebenschancen, wobei Kinder und Jugendliche tendenziell bessere Chancen hatten als ältere Passagiere. Zudem wiesen Passagiere der ersten Klasse eine höhere Überlebensrate auf als die der dritten Klasse, und Frauen hatten deutlich höhere Überlebenschancen als Männer.
+
+Die Reise mit einem Geschwister oder Ehepartner erhöhte die Überlebenschancen, während das Reisen mit mehr als zwei Geschwistern oder Ehepartnern die Chancen verringerte. Höhere Fahrpreise korrelierten ebenfalls mit besseren Überlebenschancen.
+
+Die Kombination von Merkmalen wie Alter, Kabinenklasse und Geschlecht haben signifikante Bedeutung. Frauen, besonders aus den höheren Klassen, sowie Kinder und Jugendliche gehörten zu den Gruppen mit höheren Überlebenschancen. Insbesondere hatten frauen der ersten Klasse die höchsten Überlebenschancen, während männliche Passagiere der dritten Klasse eher die niedrigsten Überlebensraten aufwiesen.
+
